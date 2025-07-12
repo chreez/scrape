@@ -1,6 +1,8 @@
 # Scrape
 
-Agentic web automation framework for intelligent data extraction from any website.
+🤖 Agentic web automation framework for intelligent data extraction from any website.
+
+**Smart Mode by Default** - Just provide a URL and get context files optimized for LLM consumption.
 
 ## Overview
 
@@ -15,27 +17,51 @@ Scrape is a modular, intelligent web automation system built on Playwright that 
 - **Configuration-Driven**: JSON-based platform and task configurations
 - **Atomic Tool Integration**: Works seamlessly with dotfiles tool system
 
-## Quick Start
+## NPX Usage (Recommended)
 
 ```bash
-# Install dependencies
-npm install
-
-# Extract data from any website
-node src/index.js <url> <data-type> [options]
+# Extract context from any URL - no installation required!
+npx @chreez/scrape <url>
 
 # Examples:
-# Social media content
-node examples/instagram-songs.js https://www.instagram.com/username/
+npx @chreez/scrape https://en.wikipedia.org/wiki/Artificial_intelligence
+npx @chreez/scrape https://news.ycombinator.com/
+npx @chreez/scrape https://github.com/microsoft/playwright
+npx @chreez/scrape https://www.amazon.com/dp/B08N5WRWNW
 
-# E-commerce product data
-node examples/amazon-products.js https://www.amazon.com/s?k=laptops
+# Custom output directory
+npx @chreez/scrape https://example.com --output ./my-data
 
-# News article extraction
-node examples/news-scraper.js https://news.ycombinator.com/
+# Verbose mode for debugging
+npx @chreez/scrape https://example.com --verbose
 
-# Real estate listings
-node examples/real-estate.js https://www.zillow.com/homes/
+# Show browser during extraction
+npx @chreez/scrape https://example.com --no-headless
+```
+
+## Output Files
+
+Every extraction creates context files optimized for LLM consumption:
+
+```
+scrape-output/
+├── summary.md          # Executive summary with key information
+├── content.txt         # Full text content, cleaned and formatted
+├── metadata.json       # Structured metadata (title, author, date, etc.)
+├── context.md          # LLM-optimized context file
+└── entities.json       # Extracted entities and concepts (when detected)
+```
+
+## Development Usage
+
+```bash
+# Clone and install for development
+git clone https://github.com/chreez/scrape.git
+cd scrape
+npm install
+
+# Run directly
+node src/index.js <url> <data-type> [options]
 ```
 
 ## Architecture

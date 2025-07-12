@@ -97,7 +97,7 @@ export class NavigationManager {
 class DirectNavigationStrategy {
   async navigate(page, url, config = {}) {
     await page.goto(url, { 
-      waitUntil: config.waitUntil || 'networkidle',
+      waitUntil: config.waitUntil || 'domcontentloaded',
       timeout: config.timeout || 30000
     });
     
@@ -110,7 +110,7 @@ class ListThenDetailStrategy {
   async navigate(page, url, config = {}) {
     // First navigate to the list page
     await page.goto(url, { 
-      waitUntil: config.waitUntil || 'networkidle',
+      waitUntil: config.waitUntil || 'domcontentloaded',
       timeout: config.timeout || 30000
     });
     
@@ -128,7 +128,7 @@ class ListThenDetailStrategy {
 class InfiniteScrollStrategy {
   async navigate(page, url, config = {}) {
     await page.goto(url, { 
-      waitUntil: config.waitUntil || 'networkidle',
+      waitUntil: config.waitUntil || 'domcontentloaded',
       timeout: config.timeout || 30000
     });
     
@@ -145,7 +145,7 @@ class InfiniteScrollStrategy {
 class PaginatedStrategy {
   async navigate(page, url, config = {}) {
     await page.goto(url, { 
-      waitUntil: config.waitUntil || 'networkidle',
+      waitUntil: config.waitUntil || 'domcontentloaded',
       timeout: config.timeout || 30000
     });
     
@@ -164,7 +164,7 @@ class PaginatedStrategy {
 class ModalOverlayStrategy {
   async navigate(page, url, config = {}) {
     await page.goto(url, { 
-      waitUntil: config.waitUntil || 'networkidle',
+      waitUntil: config.waitUntil || 'domcontentloaded',
       timeout: config.timeout || 30000
     });
     
