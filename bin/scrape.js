@@ -36,15 +36,21 @@ program
       
       const result = await scraper.extract(url);
       
-      console.log(`✅ Context files saved to: ${options.output}/`);
+      const outputDir = result._outputDir || options.output;
+      console.log(`✅ Context files saved to: ${outputDir}/`);
       console.log(`📄 Files created:`);
-      console.log(`   - summary.md (${result.summary?.length || 0} chars)`);
-      console.log(`   - content.txt (${result.content?.length || 0} chars)`);
-      console.log(`   - metadata.json (${Object.keys(result.metadata || {}).length} fields)`);
-      console.log(`   - context.md (${result.context?.length || 0} chars)`);
+      console.log(`   - summary.md (${result['summary.md']?.length || 0} chars)`);
+      console.log(`   - content.txt (${result['content.txt']?.length || 0} chars)`);
       
-      if (result.entities && result.entities.length > 0) {
-        console.log(`   - entities.json (${result.entities.length} entities)`);
+      // Handle metadata.json (it's a JSON string, so count parsed object keys)
+      const metadataCount = result['metadata.json'] ? 
+        Object.keys(JSON.parse(result['metadata.json'])).length : 0;
+      console.log(`   - metadata.json (${metadataCount} fields)`);
+      console.log(`   - context.md (${result['context.md']?.length || 0} chars)`);
+      
+      if (result['entities.json']) {
+        const entities = JSON.parse(result['entities.json']);
+        console.log(`   - entities.json (${entities.length} entities)`);
       }
       
     } catch (error) {

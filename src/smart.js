@@ -25,6 +25,16 @@ export class SmartScraper {
   async extract(url) {
     const startTime = Date.now();
     const hostname = new URL(url).hostname;
+    
+    // Create unique subdirectory for this extraction
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const safeDomain = hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const uniqueDir = `${safeDomain}_${timestamp}`;
+    const fullOutputDir = path.join(this.options.outputDir, uniqueDir);
+    
+    // Update options to use the unique directory
+    this.currentOutputDir = fullOutputDir;
+    
     const browser = await this.stealth.launchBrowser();
     const context = await this.stealth.createContext(browser);
     const page = await context.newPage();
@@ -90,8 +100,11 @@ export class SmartScraper {
       // Generate context files
       const contextFiles = await this.contextGenerator.generate(extractedData, pageAnalysis);
       
-      // Save to output directory
+      // Save to unique output directory
       await this.saveContextFiles(contextFiles);
+      
+      // Store the actual output directory in the result
+      contextFiles._outputDir = this.currentOutputDir;
       
       return contextFiles;
       
@@ -304,14 +317,14 @@ export class SmartScraper {
   }
 
   async saveContextFiles(contextFiles) {
-    // Ensure output directory exists
-    await fs.mkdir(this.options.outputDir, { recursive: true });
+    // Ensure unique output directory exists
+    await fs.mkdir(this.currentOutputDir, { recursive: true });
     
     const savePromises = [];
     
     for (const [filename, content] of Object.entries(contextFiles)) {
       if (content && content.length > 0) {
-        const filePath = path.join(this.options.outputDir, filename);
+        const filePath = path.join(this.currentOutputDir, filename);
         savePromises.push(fs.writeFile(filePath, content, 'utf8'));
       }
     }
