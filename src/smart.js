@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { StealthManager } from './stealth/manager.js';
 import { ExtractorEngine } from './extractors/engine.js';
 import { ContextGenerator } from './context/generator.js';
+import { LearningStorage } from './learning/storage.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -18,9 +19,12 @@ export class SmartScraper {
     this.stealth = new StealthManager(this.options);
     this.extractor = new ExtractorEngine(this.options);
     this.contextGenerator = new ContextGenerator(this.options);
+    this.learningStorage = new LearningStorage();
   }
 
   async extract(url) {
+    const startTime = Date.now();
+    const hostname = new URL(url).hostname;
     const browser = await this.stealth.launchBrowser();
     const context = await this.stealth.createContext(browser);
     const page = await context.newPage();
@@ -41,8 +45,47 @@ export class SmartScraper {
       const pageAnalysis = await this.analyzePage(page);
       this.log(`📊 Detected content type: ${pageAnalysis.contentType}`);
       
-      // Extract all relevant data
-      const extractedData = await this.extractAllData(page, pageAnalysis);
+      // Try learned patterns first, then fallback to default extraction
+      let extractedData = null;
+      let usedLearning = false;
+      
+      try {
+        extractedData = await this.tryLearnedExtraction(page, pageAnalysis, hostname);
+        if (extractedData) {
+          usedLearning = true;
+          this.log(`🧠 Used learned patterns for ${hostname}`);
+        }
+      } catch (error) {
+        this.log(`⚠️ Learned pattern failed: ${error.message}`);
+        await this.learningStorage.recordFailure(hostname, pageAnalysis.contentType, error.message);
+      }
+      
+      // Fallback to default extraction if learning failed or no patterns exist
+      if (!extractedData) {
+        extractedData = await this.extractAllData(page, pageAnalysis);
+        this.log(`🔧 Used default extraction for ${hostname}`);
+      }
+      
+      // Record successful extraction for learning
+      if (extractedData && this.isValidExtraction(extractedData)) {
+        const timing = {
+          delay: 3000,
+          timeout: this.options.timeout,
+          totalTime: Date.now() - startTime
+        };
+        
+        await this.learningStorage.recordSuccess(
+          hostname, 
+          pageAnalysis.contentType, 
+          {
+            platform: pageAnalysis.platform,
+            selectors: this.getUsedSelectors(pageAnalysis.contentType),
+            extractorTypes: this.getSuccessfulExtractors(extractedData),
+            timing: timing
+          },
+          usedLearning ? 'learned' : 'default'
+        );
+      }
       
       // Generate context files
       const contextFiles = await this.contextGenerator.generate(extractedData, pageAnalysis);
@@ -155,7 +198,7 @@ export class SmartScraper {
     return analysis;
   }
 
-  async extractAllData(page, pageAnalysis) {
+  async extractAllData(page, pageAnalysis, learnedPatterns = null) {
     this.log('📤 Extracting data...');
     
     const data = {
@@ -166,16 +209,33 @@ export class SmartScraper {
     };
     
     try {
-      // Always extract basic metadata
-      data.metadata = await this.extractor.extract(page, 'metadata');
-      this.log('✅ Metadata extracted');
-      
-      // Extract text content
-      data.textContent = await this.extractor.extract(page, 'text');
-      this.log('✅ Text content extracted');
-      
-      // Extract based on content type
-      switch (pageAnalysis.contentType) {
+      // Use learned extractors if available, otherwise use default approach
+      if (learnedPatterns && learnedPatterns.extractors) {
+        this.log(`🧠 Using learned extractor sequence: ${learnedPatterns.extractors.join(', ')}`);
+        
+        for (const extractorType of learnedPatterns.extractors) {
+          try {
+            const result = await this.extractor.extract(page, extractorType);
+            if (result) {
+              data[this.mapExtractorToDataKey(extractorType)] = result;
+              this.log(`✅ ${extractorType} extracted (learned)`);
+            }
+          } catch (error) {
+            this.log(`⚠️ Learned ${extractorType} extractor failed: ${error.message}`);
+          }
+        }
+      } else {
+        // Default extraction approach
+        // Always extract basic metadata
+        data.metadata = await this.extractor.extract(page, 'metadata');
+        this.log('✅ Metadata extracted');
+        
+        // Extract text content
+        data.textContent = await this.extractor.extract(page, 'text');
+        this.log('✅ Text content extracted');
+        
+        // Extract based on content type
+        switch (pageAnalysis.contentType) {
         case 'article':
         case 'blog-post':
         case 'encyclopedia-article':
@@ -216,6 +276,7 @@ export class SmartScraper {
       if (pageAnalysis.stats.images > 5) {
         data.images = await this.extractor.extract(page, 'images');
         this.log(`✅ ${data.images?.length || 0} images extracted`);
+        }
       }
       
       return data;
@@ -224,6 +285,22 @@ export class SmartScraper {
       this.log(`⚠️ Extraction error: ${error.message}`);
       throw error;
     }
+  }
+
+  mapExtractorToDataKey(extractorType) {
+    const mapping = {
+      'metadata': 'metadata',
+      'text': 'textContent',
+      'articles': 'article',
+      'products': 'product',
+      'profiles': 'profile',
+      'video': 'video',
+      'structured': 'structured',
+      'images': 'images',
+      'links': 'links'
+    };
+    
+    return mapping[extractorType] || extractorType;
   }
 
   async saveContextFiles(contextFiles) {
@@ -241,6 +318,72 @@ export class SmartScraper {
     
     await Promise.all(savePromises);
     this.log(`💾 Saved ${Object.keys(contextFiles).length} context files`);
+  }
+
+  async tryLearnedExtraction(page, pageAnalysis, hostname) {
+    const learnedPatterns = await this.learningStorage.getLearnedPatterns(hostname, pageAnalysis.contentType);
+    
+    if (!learnedPatterns || learnedPatterns.confidence < 0.4) {
+      return null; // No learned patterns or confidence too low
+    }
+    
+    this.log(`🧠 Trying learned patterns for ${hostname} (confidence: ${Math.round(learnedPatterns.confidence * 100)}%)`);
+    
+    // Use learned timing if available
+    if (learnedPatterns.timing && learnedPatterns.timing.delay) {
+      await page.waitForTimeout(learnedPatterns.timing.delay);
+    }
+    
+    // Try extraction with learned patterns
+    return await this.extractAllData(page, pageAnalysis, learnedPatterns);
+  }
+
+  isValidExtraction(extractedData) {
+    // Basic validation - check if we extracted meaningful data
+    if (!extractedData) return false;
+    
+    // Check for basic metadata
+    if (!extractedData.metadata || !extractedData.metadata.title) return false;
+    
+    // Check if we have any meaningful content (relaxed validation)
+    const hasContent = extractedData.textContent || 
+                      extractedData.article || 
+                      extractedData.structured ||
+                      extractedData.metadata.description;
+    
+    if (!hasContent) return false;
+    
+    // Looks like a valid extraction
+    return true;
+  }
+
+  getUsedSelectors(contentType) {
+    // Return the selectors that would typically be used for this content type
+    // This is a simplified version - in practice you'd track which selectors actually worked
+    const selectorMap = {
+      'article': ['h1', '.title', '.article-content', '.content'],
+      'product': ['.product-title', '.price', '.description'],
+      'social-profile': ['.username', '.bio', '.follower-count'],
+      'video': ['.video-title', '.video-description'],
+      'generic': ['h1', '.content', 'article', 'main']
+    };
+    
+    return selectorMap[contentType] || selectorMap['generic'];
+  }
+
+  getSuccessfulExtractors(extractedData) {
+    const successfulExtractors = [];
+    
+    if (extractedData.metadata) successfulExtractors.push('metadata');
+    if (extractedData.textContent) successfulExtractors.push('text');
+    if (extractedData.article) successfulExtractors.push('articles');
+    if (extractedData.product) successfulExtractors.push('products');
+    if (extractedData.profile) successfulExtractors.push('profiles');
+    if (extractedData.video) successfulExtractors.push('video');
+    if (extractedData.structured) successfulExtractors.push('structured');
+    if (extractedData.images) successfulExtractors.push('images');
+    
+    return successfulExtractors;
   }
 
   log(message) {
