@@ -4,12 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Commands
 
-**NPX Usage (Primary Interface):**
+**Installation and Usage:**
 ```bash
-npx @chreez/scrape <url>                    # Extract context from any URL
-npx @chreez/scrape <url> --output ./data    # Custom output directory
-npx @chreez/scrape <url> --verbose          # Debug mode
-npx @chreez/scrape <url> --no-headless      # Show browser
+# Installation (one-time setup)
+git clone https://github.com/chreez/scrape.git
+cd scrape
+npm install
+npm link                                    # Optional: make globally available
+
+# Usage (after installation)
+scrape <url>                                # Extract context from any URL
+scrape <url> --output ./data                # Custom output directory
+scrape <url> --verbose                      # Debug mode
+scrape <url> --no-headless                  # Show browser
+
+# Or direct execution (no npm link needed)
+node bin/scrape.js <url>
 ```
 
 **Development Commands:**
@@ -101,10 +111,13 @@ config/platforms.json     # Platform configurations
 
 **Manual Testing:**
 ```bash
-# Test different content types
-npx @chreez/scrape https://en.wikipedia.org/wiki/AI
-npx @chreez/scrape https://news.ycombinator.com/
-npx @chreez/scrape https://github.com/microsoft/playwright
+# Test different content types (after installation)
+scrape https://en.wikipedia.org/wiki/AI --verbose
+scrape https://news.ycombinator.com/ --verbose
+scrape https://github.com/microsoft/playwright --verbose
+
+# Or with direct execution
+node bin/scrape.js https://en.wikipedia.org/wiki/AI --verbose
 ```
 
 **Cleanup:** Always remove test output files (`scrape-output/`) before commits

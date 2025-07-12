@@ -59,10 +59,13 @@ program
 // Add help examples
 program.addHelpText('after', `
 Examples:
-  $ npx @chreez/scrape https://example.com/article
-  $ npx @chreez/scrape https://news.ycombinator.com/ --output ./hn-data
-  $ npx @chreez/scrape https://github.com/user/repo --verbose
-  $ npx @chreez/scrape https://wikipedia.org/wiki/Topic --no-headless
+  $ scrape https://example.com/article
+  $ scrape https://news.ycombinator.com/ --output ./hn-data
+  $ scrape https://github.com/user/repo --verbose
+  $ scrape https://wikipedia.org/wiki/Topic --no-headless
+
+  # Or with direct execution:
+  $ node bin/scrape.js https://example.com/article
 
 Output Files:
   summary.md    - Executive summary of extracted content

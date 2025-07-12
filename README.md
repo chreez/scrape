@@ -17,26 +17,40 @@ Scrape is an intelligent web automation system that learns from successful extra
 - **🚀 Zero Configuration**: Works out-of-the-box with any URL
 - **🔧 Self-Healing**: Automatically adapts when page structures change
 
-## NPX Usage (Recommended)
+## Installation
 
+**Quick Setup (Recommended):**
 ```bash
-# Extract context from any URL - no installation required!
-npx @chreez/scrape <url>
+# Clone and install
+git clone https://github.com/chreez/scrape.git
+cd scrape
+npm install
+
+# Make globally available (optional)
+npm link
+```
+
+**Usage After Installation:**
+```bash
+# If you ran npm link
+scrape <url>
+
+# Or direct execution
+node bin/scrape.js <url>
 
 # Examples:
-npx @chreez/scrape https://en.wikipedia.org/wiki/Artificial_intelligence
-npx @chreez/scrape https://news.ycombinator.com/
-npx @chreez/scrape https://github.com/microsoft/playwright
-npx @chreez/scrape https://www.amazon.com/dp/B08N5WRWNW
+scrape https://en.wikipedia.org/wiki/Artificial_intelligence
+scrape https://news.ycombinator.com/
+scrape https://github.com/microsoft/playwright
 
 # Custom output directory
-npx @chreez/scrape https://example.com --output ./my-data
+scrape https://example.com --output ./my-data
 
 # Verbose mode for debugging
-npx @chreez/scrape https://example.com --verbose
+scrape https://example.com --verbose
 
 # Show browser during extraction
-npx @chreez/scrape https://example.com --no-headless
+scrape https://example.com --no-headless
 ```
 
 ## Output Files
@@ -72,16 +86,40 @@ URL → Platform Detection → Learned Patterns (if available) → Smart Extract
 - Code repositories, technical docs
 - Academic papers, research content
 
-## Development Usage
+## For Lore Integration
 
+**Option 1: Git Clone (Recommended for Development)**
 ```bash
-# Clone and install for development
+# In your Lore project
+git clone https://github.com/chreez/scrape.git tools/scrape
+cd tools/scrape
+npm install
+
+# Use from Lore
+node tools/scrape/bin/scrape.js <url>
+```
+
+**Option 2: Global Install**
+```bash
+# One-time setup
+git clone https://github.com/chreez/scrape.git
+cd scrape
+npm install
+npm link
+
+# Now available globally
+scrape <url>
+```
+
+**Option 3: Direct Node Execution**
+```bash
+# Clone anywhere
 git clone https://github.com/chreez/scrape.git
 cd scrape
 npm install
 
-# Run directly
-node src/index.js <url> <data-type> [options]
+# Direct usage (no global install)
+node /full/path/to/scrape/bin/scrape.js <url>
 ```
 
 ## Architecture
@@ -141,18 +179,18 @@ See the `examples/` directory for platform-specific usage:
 
 ```bash
 # Test smart extraction
-node src/smart.js
+node bin/scrape.js <url> --verbose
 
-# Direct usage
+# Legacy direct usage
 node src/index.js <url> <data-type> [options]
 
 # Lint code
 npm run lint
 
 # Test with various content types
-npx @chreez/scrape https://en.wikipedia.org/wiki/AI
-npx @chreez/scrape https://news.ycombinator.com/
-npx @chreez/scrape https://github.com/microsoft/playwright
+scrape https://en.wikipedia.org/wiki/AI --verbose
+scrape https://news.ycombinator.com/ --verbose
+scrape https://github.com/microsoft/playwright --verbose
 ```
 
 ## Learning Cache

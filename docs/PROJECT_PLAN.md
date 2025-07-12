@@ -21,7 +21,10 @@ URL Input → AI Analysis → Context Files Output
 
 **Single Command Interface:**
 ```bash
-npx @chreez/scrape <url>
+# After git clone and npm install
+scrape <url>
+# Or direct execution
+node bin/scrape.js <url>
 ```
 
 **Output Structure:**
@@ -92,7 +95,7 @@ Scrape fulfills **Week 4** requirements from Lore's project plan:
 
 ### Data Flow Integration
 ```
-Lore Research Agent → npx @chreez/scrape <url> → Context Files → Lore Processing Pipeline
+Lore Research Agent → scrape <url> → Context Files → Lore Processing Pipeline
 ```
 
 ### Output Compatibility
@@ -198,10 +201,11 @@ interface ScrapeOutput {
 ## Integration Timeline
 
 ### Immediate (Weeks 1-2)
-- ✅ Basic NPX functionality
+- ✅ Git-based installation functionality
 - ✅ Smart extraction implementation (SmartScraper)
 - ✅ Context file generation (ContextGenerator)
 - 🔄 Testing with common sites
+- 📋 NPM publication (future enhancement)
 
 ### Short-term (Weeks 3-4)
 - Integration testing with Lore
@@ -226,14 +230,15 @@ interface ScrapeOutput {
 ## Success Metrics
 
 ### Phase 1 Success Criteria
-- [x] NPX package installable and executable
+- [x] Git-based installation and execution
 - [x] Smart extraction with learning capabilities
 - [x] Context files compatible with LLM processing
 - [x] Platform detection and content type analysis
 - [x] Adaptive learning with confidence scoring
+- [x] Documentation complete for git-based integration
 - [ ] 90% success rate on top 20 website types (testing in progress)
 - [ ] <30 second extraction time for most URLs (optimization needed)
-- [ ] Documentation complete for integration
+- [ ] NPM publication for global npx access (future)
 
 ### Integration Success Criteria
 - [ ] Seamless Lore workflow integration
