@@ -1,73 +1,131 @@
-# Claude Development Rules for Scrape Repository
+# CLAUDE.md
 
-## Git Commit Structure
-- **Commit Size**: Keep commits under 300 lines of changes
-- **Commit Messages**: Use conventional commit format:
-  ```
-  type(scope): description
-  
-  Detailed explanation if needed
-  
-  🤖 Generated with [Claude Code](https://claude.ai/code)
-  Co-Authored-By: Claude <noreply@anthropic.com>
-  ```
-- **Types**: feat, fix, docs, refactor, test, chore
-- **Auto-push**: Push each commit immediately after creation
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Workspace Cleanliness
-- **No Test Files**: Remove all temporary test files after each iteration
-- **Clean Output**: Delete generated output files (*.json, scrape-output/*)
-- **Organized Structure**: Maintain clean directory structure
-- **No Build Artifacts**: Remove node_modules, package-lock.json from commits
+## Core Commands
+
+**NPX Usage (Primary Interface):**
+```bash
+npx @chreez/scrape <url>                    # Extract context from any URL
+npx @chreez/scrape <url> --output ./data    # Custom output directory
+npx @chreez/scrape <url> --verbose          # Debug mode
+npx @chreez/scrape <url> --no-headless      # Show browser
+```
+
+**Development Commands:**
+```bash
+node src/index.js <url> <data-type>         # Direct usage
+npm start                                   # Same as above
+npm run lint                                # Code linting (ESLint)
+npm test                                    # Run tests (placeholder)
+```
+
+**Output Structure:** All extractions create context files in `scrape-output/`:
+- `summary.md` - Executive summary
+- `content.txt` - Cleaned text content  
+- `metadata.json` - Structured metadata
+- `context.md` - LLM-optimized context
+- `entities.json` - Extracted entities (when detected)
+
+## Architecture Overview
+
+**Two-Track System:**
+1. **Smart Mode** (`SmartScraper`): Default NPX interface with AI-powered adaptability
+2. **Legacy Mode** (`Scrape`): Platform-specific adapters for targeted extraction
+
+**Smart Extraction Flow:**
+```
+URL → Page Analysis → Learned Patterns (if available) → Default Extraction → Context Generation
+```
+
+**Core Components:**
+- **`SmartScraper`**: Main extraction engine with learning capabilities
+- **`LearningStorage`**: 6-month persistent cache of successful extraction patterns in `~/.scrape/learning.json`
+- **`ContextGenerator`**: Creates LLM-optimized output files
+- **`ExtractorEngine`**: Handles different content types (articles, products, profiles, etc.)
+- **`StealthManager`**: Anti-detection and browser management
+
+**Platform Detection:** Auto-detects content type from URL patterns and DOM structure:
+- Social media (Instagram, Twitter, TikTok)
+- Video platforms (YouTube)
+- E-commerce (Amazon) 
+- Code repositories (GitHub)
+- News/articles (generic detection)
+- Documentation sites
+
+## Learning System
+
+**Adaptive Learning:** Successfully extracted patterns are cached for 6 months with confidence scoring:
+- Stores working selectors, extractor sequences, and optimal timing
+- Cache auto-expires and self-repairs on failures
+- Confidence decreases over time (100% → 40% over 3 months)
+- Failed extractions trigger cache invalidation
+
+**Learning File:** `~/.scrape/learning.json` contains domain-specific patterns with:
+- Platform detection results
+- Successful extractor types
+- Optimal timing parameters
+- Working DOM selectors
 
 ## File Organization
 ```
-scrape/
-├── bin/                 # NPX executable
-├── src/                 # Core framework
-│   ├── adapters/        # Platform-specific logic
-│   ├── context/         # Context file generators
-│   ├── extractors/      # Data extraction engines
-│   ├── navigation/      # Navigation strategies
-│   ├── orchestrator/    # Task management
-│   └── stealth/         # Anti-detection
-├── config/              # Platform configurations
-├── docs/                # Documentation
-└── examples/            # Usage examples
+src/
+├── smart.js              # Smart extraction with learning
+├── index.js              # Legacy platform-specific extraction
+├── adapters/             # Platform-specific logic (Instagram, etc.)
+├── context/generator.js  # Context file creation
+├── extractors/engine.js  # Content type extraction
+├── learning/storage.js   # Pattern learning and caching
+├── navigation/manager.js # Page navigation strategies
+├── stealth/manager.js    # Anti-detection features
+└── orchestrator/         # Task management
+
+bin/scrape.js             # NPX CLI interface
+config/platforms.json     # Platform configurations
 ```
 
-## Development Workflow
-1. **Before Changes**: Clean workspace of test files
-2. **During Development**: Keep iterations small and focused
-3. **After Changes**: 
-   - Clean up test files
-   - Verify workspace is neat
-   - Commit with proper message
-   - Push immediately
+## Development Patterns
 
-## Testing Guidelines
-- **Temporary Files**: Use `/tmp/` or `./temp/` for test outputs
-- **Cleanup**: Always remove test files before committing
-- **Examples**: Keep real examples in `examples/` directory only
+**Content Type Strategy:** Different extraction logic based on detected content:
+- `article/blog-post/encyclopedia-article` → Article extractor
+- `product` → Product extractor  
+- `social-profile` → Profile extractor
+- `video/social-video` → Video extractor
+- `generic` → Fallback text extraction
 
-## Commit Frequency
-- **Small Changes**: Commit every 50-100 lines
-- **Feature Complete**: Commit when feature is working
-- **Bug Fixes**: Commit immediately after fix
-- **Documentation**: Separate commits for doc updates
+**Error Handling:** Graceful degradation with learning cache invalidation on failures
 
-## Prohibited in Commits
-- Test output files (*.json in root)
-- Temporary directories (scrape-output/, temp/, tmp/)
-- Debug logs or console.log additions
-- Commented-out code blocks
-- Package lock files (already in .gitignore)
+**Browser Management:** Playwright-based with stealth features and human-like behavior patterns
 
-## Quality Gates
-Before each commit:
-- [ ] Workspace is clean
-- [ ] No test files remaining
-- [ ] Code follows existing patterns
-- [ ] Commit message is clear
-- [ ] Changes are under 300 lines
-- [ ] Ready to push immediately
+## Testing Strategy
+
+**Manual Testing:**
+```bash
+# Test different content types
+npx @chreez/scrape https://en.wikipedia.org/wiki/AI
+npx @chreez/scrape https://news.ycombinator.com/
+npx @chreez/scrape https://github.com/microsoft/playwright
+```
+
+**Cleanup:** Always remove test output files (`scrape-output/`) before commits
+
+## Git Workflow
+
+**Commit Format:**
+```
+type(scope): description
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Prohibited in Commits:**
+- Test output files (`*.json` in root, `scrape-output/`)
+- Temporary directories
+- Debug console.log statements
+- Package lock files
+
+**Quality Gates:**
+- Keep commits under 300 lines
+- Clean workspace before commits
+- Push immediately after commit

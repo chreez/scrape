@@ -1,21 +1,21 @@
 # Scrape
 
-🤖 Agentic web automation framework for intelligent data extraction from any website.
+🤖 Agentic web automation framework with AI-powered content extraction and adaptive learning.
 
-**Smart Mode by Default** - Just provide a URL and get context files optimized for LLM consumption.
+**Smart by Default** - Just provide a URL and get LLM-optimized context files with zero configuration.
 
 ## Overview
 
-Scrape is a modular, intelligent web automation system built on Playwright that adapts to any website's structure and extraction requirements. It uses LLM-powered adaptability to handle dynamic UIs, anti-bot measures, and evolving web technologies.
+Scrape is an intelligent web automation system that learns from successful extractions to improve over time. Built on Playwright with a sophisticated learning engine, it automatically adapts to any website's structure and handles evolving web technologies through pattern recognition and self-healing extraction strategies.
 
 ## Features
 
-- **Universal Platform Support**: Social media, e-commerce, news sites, forums, APIs, databases
-- **Adaptive Extraction**: Self-healing selectors using AI analysis
-- **Anti-Detection Suite**: Human-like behavior patterns and stealth features
-- **Modular Architecture**: Platform adapters, navigation strategies, extraction engines
-- **Configuration-Driven**: JSON-based platform and task configurations
-- **Atomic Tool Integration**: Works seamlessly with dotfiles tool system
+- **🧠 Adaptive Learning**: 6-month cache of successful patterns with confidence scoring
+- **🔍 Smart Detection**: Auto-identifies content types (articles, products, profiles, videos)
+- **🛡️ Anti-Detection**: Human-like behavior simulation and stealth browsing
+- **📊 Context Generation**: Creates LLM-optimized output files for any content
+- **🚀 Zero Configuration**: Works out-of-the-box with any URL
+- **🔧 Self-Healing**: Automatically adapts when page structures change
 
 ## NPX Usage (Recommended)
 
@@ -52,6 +52,26 @@ scrape-output/
 └── entities.json       # Extracted entities and concepts (when detected)
 ```
 
+## How It Works
+
+**Intelligent Extraction Flow:**
+```
+URL → Platform Detection → Learned Patterns (if available) → Smart Extraction → Context Generation
+```
+
+**Learning System:**
+- Successful extractions are cached for 6 months in `~/.scrape/learning.json`
+- Patterns include working selectors, timing, and extraction strategies
+- Confidence scoring decreases over time (100% → 40% over 3 months)
+- Failed extractions trigger cache invalidation and pattern updates
+
+**Content Type Detection:**
+- Articles, blog posts, news, documentation
+- Products, e-commerce pages, reviews
+- Social profiles, posts, videos
+- Code repositories, technical docs
+- Academic papers, research content
+
 ## Development Usage
 
 ```bash
@@ -66,13 +86,25 @@ node src/index.js <url> <data-type> [options]
 
 ## Architecture
 
+**Smart Scraper (Primary):**
+- AI-powered content analysis and extraction
+- Adaptive learning with pattern caching
+- Context file generation for LLM consumption
+
+**Legacy Platform Adapters (Fallback):**
+- Site-specific extraction logic
+- Targeted social media, e-commerce support
+- Configuration-driven extraction patterns
+
 ```
 src/
-├── adapters/         # Site-specific logic (social media, e-commerce, news, etc.)
-├── navigation/       # Navigation strategies (list-then-detail, infinite-scroll, pagination)
-├── extractors/       # Data extraction engines (multimedia, text, structured data, APIs)
-├── stealth/         # Anti-detection features (fingerprinting, behavior, proxy rotation)
-└── orchestrator/    # Task management (queuing, retry, progress, parallel processing)
+├── smart.js              # Main smart extraction engine
+├── context/generator.js  # LLM-optimized context files
+├── learning/storage.js   # Pattern learning and caching
+├── extractors/engine.js  # Content type extraction
+├── stealth/manager.js    # Anti-detection and browser management
+├── adapters/             # Platform-specific logic (fallback)
+└── navigation/           # Page navigation strategies
 ```
 
 ## Configuration
@@ -108,15 +140,36 @@ See the `examples/` directory for platform-specific usage:
 ## Development
 
 ```bash
-# Run tests
-npm test
+# Test smart extraction
+node src/smart.js
+
+# Direct usage
+node src/index.js <url> <data-type> [options]
 
 # Lint code
 npm run lint
 
-# Start development server
-npm start
+# Test with various content types
+npx @chreez/scrape https://en.wikipedia.org/wiki/AI
+npx @chreez/scrape https://news.ycombinator.com/
+npx @chreez/scrape https://github.com/microsoft/playwright
 ```
+
+## Learning Cache
+
+**View cache statistics:**
+```javascript
+import { LearningStorage } from './src/learning/storage.js';
+const storage = new LearningStorage();
+console.log(await storage.getStats());
+```
+
+**Clear cache:**
+```javascript
+await storage.clearAllCache();
+```
+
+**Cache location:** `~/.scrape/learning.json`
 
 ## Atomic Tool Integration
 
