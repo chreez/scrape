@@ -228,10 +228,13 @@ export class SmartScraper {
         
         for (const extractorType of learnedPatterns.extractors) {
           try {
-            const result = await this.extractor.extract(page, extractorType);
+            // Convert learned selectors to extractor-compatible format
+            const config = this.buildExtractorConfig(extractorType, learnedPatterns, pageAnalysis.contentType);
+            
+            const result = await this.extractor.extract(page, extractorType, config);
             if (result) {
               data[this.mapExtractorToDataKey(extractorType)] = result;
-              this.log(`✅ ${extractorType} extracted (learned)`);
+              this.log(`✅ ${extractorType} extracted (learned with custom selectors)`);
             }
           } catch (error) {
             this.log(`⚠️ Learned ${extractorType} extractor failed: ${error.message}`);
@@ -382,6 +385,48 @@ export class SmartScraper {
     };
     
     return selectorMap[contentType] || selectorMap['generic'];
+  }
+
+  buildExtractorConfig(extractorType, learnedPatterns, contentType) {
+    // Convert learned selectors array to extractor-specific config
+    const learnedSelectors = learnedPatterns.selectors?.[contentType] || 
+                            learnedPatterns.selectors?.[extractorType] || [];
+    
+    if (!learnedSelectors || learnedSelectors.length === 0) {
+      return {}; // No learned selectors, use defaults
+    }
+    
+    // Convert array of selectors to extractor-specific format
+    switch (extractorType) {
+      case 'text':
+        return {
+          selectors: {
+            title: learnedSelectors.find(s => s.includes('h1') || s.includes('title')) || learnedSelectors[0],
+            content: learnedSelectors.find(s => s.includes('content') || s.includes('article') || s.includes('main')) || learnedSelectors.join(', '),
+            description: learnedSelectors.find(s => s.includes('description')) || '',
+            tags: learnedSelectors.find(s => s.includes('tag')) || ''
+          }
+        };
+      
+      case 'articles':
+        return {
+          selectors: {
+            title: learnedSelectors[0] || 'h1',
+            content: learnedSelectors.join(', '),
+            author: '.author, .byline, [data-author]',
+            publishDate: '.date, .publish-date, time'
+          }
+        };
+      
+      case 'metadata':
+        return {}; // Metadata extractor uses meta tags, not learned selectors
+      
+      default:
+        // For other extractors, convert first selector
+        return {
+          selector: learnedSelectors[0] || undefined
+        };
+    }
   }
 
   getSuccessfulExtractors(extractedData) {
