@@ -1,0 +1,142 @@
+{
+  "instagram": {
+    "domain": "instagram.com",
+    "dataTypes": ["songs", "audio", "reels", "videos", "posts", "profile"],
+    "rateLimit": {
+      "requestsPerMinute": 20,
+      "delayBetweenRequests": 3000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": false
+    }
+  },
+  "tiktok": {
+    "domain": "tiktok.com",
+    "dataTypes": ["videos", "audio", "profile", "hashtags"],
+    "rateLimit": {
+      "requestsPerMinute": 15,
+      "delayBetweenRequests": 4000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": false
+    }
+  },
+  "youtube": {
+    "domain": "youtube.com",
+    "dataTypes": ["videos", "playlists", "channels", "comments"],
+    "rateLimit": {
+      "requestsPerMinute": 30,
+      "delayBetweenRequests": 2000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": false,
+      "hasInfiniteScroll": true,
+      "hasPagination": true
+    }
+  },
+  "twitter": {
+    "domain": "twitter.com",
+    "dataTypes": ["tweets", "profile", "followers", "media"],
+    "rateLimit": {
+      "requestsPerMinute": 10,
+      "delayBetweenRequests": 6000
+    },
+    "features": {
+      "requiresAuth": true,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": false
+    }
+  },
+  "linkedin": {
+    "domain": "linkedin.com",
+    "dataTypes": ["posts", "profile", "connections", "jobs"],
+    "rateLimit": {
+      "requestsPerMinute": 8,
+      "delayBetweenRequests": 7500
+    },
+    "features": {
+      "requiresAuth": true,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": false
+    }
+  },
+  "reddit": {
+    "domain": "reddit.com",
+    "dataTypes": ["posts", "comments", "subreddits", "users"],
+    "rateLimit": {
+      "requestsPerMinute": 25,
+      "delayBetweenRequests": 2400
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": true
+    }
+  },
+  "amazon": {
+    "domain": "amazon.com",
+    "dataTypes": ["products", "reviews", "prices", "categories"],
+    "rateLimit": {
+      "requestsPerMinute": 12,
+      "delayBetweenRequests": 5000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": false,
+      "hasInfiniteScroll": false,
+      "hasPagination": true
+    }
+  },
+  "github": {
+    "domain": "github.com",
+    "dataTypes": ["repositories", "issues", "users", "commits"],
+    "rateLimit": {
+      "requestsPerMinute": 40,
+      "delayBetweenRequests": 1500
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": false,
+      "hasInfiniteScroll": false,
+      "hasPagination": true
+    }
+  },
+  "hackernews": {
+    "domain": "news.ycombinator.com",
+    "dataTypes": ["articles", "comments", "users", "jobs"],
+    "rateLimit": {
+      "requestsPerMinute": 30,
+      "delayBetweenRequests": 2000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": false,
+      "hasInfiniteScroll": false,
+      "hasPagination": true
+    }
+  },
+  "zillow": {
+    "domain": "zillow.com",
+    "dataTypes": ["properties", "prices", "agents", "neighborhoods"],
+    "rateLimit": {
+      "requestsPerMinute": 10,
+      "delayBetweenRequests": 6000
+    },
+    "features": {
+      "requiresAuth": false,
+      "hasModals": true,
+      "hasInfiniteScroll": true,
+      "hasPagination": true
+    }
+  }
+}

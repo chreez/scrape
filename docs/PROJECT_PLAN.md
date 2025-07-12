@@ -66,6 +66,10 @@ scrape-output/
 - [ ] Confidence scoring
 - [ ] Error recovery and retry logic
 - [ ] Performance optimization
+- [ ] Academic paper scraper integration *added from lore*
+- [ ] Database-compatible structured output *added from lore*
+- [ ] Audit logging for all scraping operations *added from lore*
+- [ ] Source metadata preservation (author, date, publication) *added from lore*
 
 ---
 
@@ -77,6 +81,9 @@ Scrape fulfills **Week 4** requirements from Lore's project plan:
 - ✅ Content structure preservation
 - ✅ Paywall detection (via stealth features)
 - ✅ Source verification
+- ✅ PDF extraction (OCR support) *added from lore*
+- ✅ Rate limiting implementation *added from lore*
+- ✅ Error handling and retry logic *added from lore*
 
 ### Data Flow Integration
 ```
@@ -99,6 +106,15 @@ interface ScrapeOutput {
   metadata: object;       // Structured data
   context: string;        // LLM-optimized content
   entities?: object[];    // Extracted entities
+  // *added from lore* - Database compatibility
+  sourceId: string;       // Unique source identifier
+  url: string;           // Original URL
+  title: string;         // Page/document title
+  author?: string;       // Content author
+  contentDate?: string;  // Publication date (ISO format)
+  scrapedAt: string;     // Extraction timestamp
+  confidence: number;    // Extraction confidence (0-1)
+  extractionMethod: string; // Method used for extraction
 }
 ```
 
@@ -118,6 +134,9 @@ interface ScrapeOutput {
 - **News**: Articles, blogs, documentation
 - **Code**: GitHub repositories, technical docs
 - **Research**: Papers, Wikipedia, academic content
+- **Academic**: ArXiv, PubMed, Google Scholar *added from lore*
+- **PDFs**: Local and remote PDF extraction with OCR *added from lore*
+- **Multimedia**: Video transcripts, audio content *added from lore*
 
 ### Performance Characteristics
 - **Speed**: 2-30 seconds per URL (depends on complexity)
