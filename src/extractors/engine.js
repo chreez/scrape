@@ -113,14 +113,90 @@ class TextExtractor extends BaseExtractor {
     const results = {};
     
     for (const [key, selector] of Object.entries(selectors)) {
-      if (Array.isArray(selector)) {
-        results[key] = await this.extractAll(page, selector[0]);
+      if (key === 'content') {
+        // For content, extract all paragraphs and text blocks
+        results[key] = await this.extractFullContent(page, selector);
+      } else if (key === 'tags' || Array.isArray(selector)) {
+        results[key] = await this.extractAll(page, Array.isArray(selector) ? selector[0] : selector);
       } else {
         results[key] = await this.safeExtract(page, selector);
       }
     }
     
     return results;
+  }
+
+  async extractFullContent(page, contentSelector) {
+    try {
+      return await page.evaluate((sel) => {
+        // Try multiple strategies to get comprehensive content
+        const strategies = [
+          // Strategy 1: Main content area + all paragraphs
+          () => {
+            const main = document.querySelector(sel);
+            if (main) {
+              const paragraphs = main.querySelectorAll('p, div.paragraph, .content-block');
+              return Array.from(paragraphs).map(p => p.textContent?.trim()).filter(Boolean).join('\n\n');
+            }
+            return null;
+          },
+          
+          // Strategy 2: All paragraphs in main content areas
+          () => {
+            const contentAreas = document.querySelectorAll(sel);
+            let content = [];
+            contentAreas.forEach(area => {
+              const paragraphs = area.querySelectorAll('p, div.paragraph, .text-block');
+              paragraphs.forEach(p => {
+                const text = p.textContent?.trim();
+                if (text && text.length > 20) { // Filter out short snippets
+                  content.push(text);
+                }
+              });
+            });
+            return content.join('\n\n');
+          },
+          
+          // Strategy 3: Wikipedia-specific content extraction
+          () => {
+            if (window.location.hostname.includes('wikipedia.org')) {
+              const content = document.querySelector('#mw-content-text .mw-parser-output');
+              if (content) {
+                const paragraphs = content.querySelectorAll('p');
+                return Array.from(paragraphs)
+                  .map(p => p.textContent?.trim())
+                  .filter(text => text && text.length > 50)
+                  .slice(0, 10) // Limit to first 10 substantial paragraphs
+                  .join('\n\n');
+              }
+            }
+            return null;
+          },
+          
+          // Strategy 4: Fallback - all paragraphs on page
+          () => {
+            const allParagraphs = document.querySelectorAll('p');
+            return Array.from(allParagraphs)
+              .map(p => p.textContent?.trim())
+              .filter(text => text && text.length > 30)
+              .slice(0, 15) // Limit to prevent overwhelming output
+              .join('\n\n');
+          }
+        ];
+        
+        // Try each strategy until we get substantial content
+        for (const strategy of strategies) {
+          const content = strategy();
+          if (content && content.length > 200) {
+            return content;
+          }
+        }
+        
+        return null;
+      }, contentSelector);
+    } catch (error) {
+      return null;
+    }
   }
 }
 
@@ -369,7 +445,10 @@ class ArticleExtractor extends BaseExtractor {
     const results = {};
     
     for (const [key, selector] of Object.entries(selectors)) {
-      if (key === 'tags') {
+      if (key === 'content') {
+        // Use comprehensive content extraction for articles
+        results[key] = await this.extractArticleContent(page, selector);
+      } else if (key === 'tags') {
         results[key] = await this.extractAll(page, selector);
       } else if (key === 'publishDate') {
         results[key] = await this.safeExtract(page, selector, 'datetime') || 
@@ -380,5 +459,74 @@ class ArticleExtractor extends BaseExtractor {
     }
     
     return results;
+  }
+
+  async extractArticleContent(page, contentSelector) {
+    try {
+      return await page.evaluate((sel) => {
+        // Article-specific content extraction strategies
+        const strategies = [
+          // Strategy 1: Article content area
+          () => {
+            const article = document.querySelector(sel);
+            if (article) {
+              const paragraphs = article.querySelectorAll('p, .paragraph, .content-block, .text-block');
+              return Array.from(paragraphs)
+                .map(p => p.textContent?.trim())
+                .filter(text => text && text.length > 25)
+                .join('\n\n');
+            }
+            return null;
+          },
+          
+          // Strategy 2: Common article selectors
+          () => {
+            const selectors = [
+              '.post-content p', '.entry-content p', '.article-body p',
+              'main article p', '.content p', '[data-testid="article-text"] p'
+            ];
+            
+            for (const selector of selectors) {
+              const paragraphs = document.querySelectorAll(selector);
+              if (paragraphs.length > 2) {
+                return Array.from(paragraphs)
+                  .map(p => p.textContent?.trim())
+                  .filter(text => text && text.length > 25)
+                  .slice(0, 20)
+                  .join('\n\n');
+              }
+            }
+            return null;
+          },
+          
+          // Strategy 3: Wikipedia articles
+          () => {
+            if (window.location.hostname.includes('wikipedia.org')) {
+              const content = document.querySelector('#mw-content-text .mw-parser-output');
+              if (content) {
+                const paragraphs = content.querySelectorAll('p');
+                return Array.from(paragraphs)
+                  .map(p => p.textContent?.trim())
+                  .filter(text => text && text.length > 50 && !text.startsWith('Coordinates:'))
+                  .slice(0, 15)
+                  .join('\n\n');
+              }
+            }
+            return null;
+          }
+        ];
+        
+        for (const strategy of strategies) {
+          const content = strategy();
+          if (content && content.length > 500) {
+            return content;
+          }
+        }
+        
+        return null;
+      }, contentSelector);
+    } catch (error) {
+      return null;
+    }
   }
 }
