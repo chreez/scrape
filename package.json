@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "scrape": "./bin/scrape.js"
+    "scrape": "./bin/scrape.js",
+    "scrape-batch": "./bin/scrape-batch.js"
   },
   "scripts": {
     "start": "node src/index.js",
