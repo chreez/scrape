@@ -3,6 +3,16 @@ import { StealthManager } from './stealth/manager.js';
 import { ExtractorEngine } from './extractors/engine.js';
 import { ContextGenerator } from './context/generator.js';
 import { LearningStorage } from './learning/storage.js';
+import { 
+  NavigationError, 
+  ExtractionError, 
+  DetectionError,
+  ContextGenerationError,
+  FileSystemError,
+  ErrorHandler,
+  Result 
+} from './errors/index.js';
+import { ErrorRecovery, CircuitBreaker } from './errors/recovery.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -13,6 +23,8 @@ export class SmartScraper {
       verbose: false,
       outputDir: 'scrape-output',
       timeout: 30000,
+      maxRetries: 3,
+      enableRecovery: true,
       ...options
     };
     
@@ -20,11 +32,27 @@ export class SmartScraper {
     this.extractor = new ExtractorEngine(this.options);
     this.contextGenerator = new ContextGenerator(this.options);
     this.learningStorage = new LearningStorage();
+    this.errorRecovery = new ErrorRecovery();
+    this.circuitBreaker = new CircuitBreaker();
   }
 
   async extract(url) {
+    return await ErrorHandler.withRetry(
+      async (attempt) => this.extractWithRecovery(url, attempt),
+      this.options.maxRetries,
+      1000
+    );
+  }
+
+  async extractWithRecovery(url, attempt = 1) {
     const startTime = Date.now();
-    const hostname = new URL(url).hostname;
+    let hostname;
+    
+    try {
+      hostname = new URL(url).hostname;
+    } catch (error) {
+      throw new NavigationError(`Invalid URL: ${url}`, url, { originalError: error });
+    }
     
     // Create unique subdirectory for this extraction
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
@@ -40,12 +68,27 @@ export class SmartScraper {
     const page = await context.newPage();
     
     try {
-      this.log(`🌐 Navigating to ${url}...`);
+      this.log(`🌐 Navigating to ${url}... (attempt ${attempt})`);
       
-      // Navigate with intelligent timeout handling
-      await page.goto(url, { 
-        waitUntil: 'domcontentloaded',
-        timeout: this.options.timeout 
+      // Navigate with error handling and recovery
+      await this.circuitBreaker.execute(async () => {
+        try {
+          await page.goto(url, { 
+            waitUntil: 'domcontentloaded',
+            timeout: this.options.timeout 
+          });
+        } catch (error) {
+          throw new NavigationError(
+            `Failed to navigate to ${url}: ${error.message}`,
+            url,
+            { 
+              timeout: this.options.timeout,
+              waitUntil: 'domcontentloaded',
+              attempt,
+              originalError: error 
+            }
+          );
+        }
       });
       
       // Wait for content to stabilize
@@ -68,12 +111,40 @@ export class SmartScraper {
       } catch (error) {
         this.log(`⚠️ Learned pattern failed: ${error.message}`);
         await this.learningStorage.recordFailure(hostname, pageAnalysis.contentType, error.message);
+        
+        // Try recovery if enabled
+        if (this.options.enableRecovery) {
+          const recoveryContext = {
+            page,
+            hostname,
+            contentType: pageAnalysis.contentType,
+            learningStorage: this.learningStorage
+          };
+          
+          const recovery = await this.errorRecovery.recover(error, recoveryContext);
+          if (recovery.success) {
+            this.log(`🔄 Recovery successful: ${recovery.strategy}`);
+          }
+        }
       }
       
       // Fallback to default extraction if learning failed or no patterns exist
       if (!extractedData) {
-        extractedData = await this.extractAllData(page, pageAnalysis);
-        this.log(`🔧 Used default extraction for ${hostname}`);
+        try {
+          extractedData = await this.extractAllData(page, pageAnalysis);
+          this.log(`🔧 Used default extraction for ${hostname}`);
+        } catch (error) {
+          throw new ExtractionError(
+            `Default extraction failed for ${hostname}: ${error.message}`,
+            'default',
+            {
+              hostname,
+              contentType: pageAnalysis.contentType,
+              attempt,
+              originalError: error
+            }
+          );
+        }
       }
       
       // Record successful extraction for learning
@@ -97,11 +168,37 @@ export class SmartScraper {
         );
       }
       
-      // Generate context files
-      const contextFiles = await this.contextGenerator.generate(extractedData, pageAnalysis);
+      // Generate context files with error handling
+      let contextFiles;
+      try {
+        contextFiles = await this.contextGenerator.generate(extractedData, pageAnalysis);
+      } catch (error) {
+        throw new ContextGenerationError(
+          `Failed to generate context files: ${error.message}`,
+          'all',
+          {
+            hostname,
+            contentType: pageAnalysis.contentType,
+            extractedDataKeys: Object.keys(extractedData),
+            originalError: error
+          }
+        );
+      }
       
-      // Save to unique output directory
-      await this.saveContextFiles(contextFiles);
+      // Save to unique output directory with error handling
+      try {
+        await this.saveContextFiles(contextFiles);
+      } catch (error) {
+        throw new FileSystemError(
+          `Failed to save context files: ${error.message}`,
+          this.currentOutputDir,
+          'write',
+          {
+            contextFileCount: Object.keys(contextFiles).length,
+            originalError: error
+          }
+        );
+      }
       
       // Store the actual output directory in the result
       contextFiles._outputDir = this.currentOutputDir;
