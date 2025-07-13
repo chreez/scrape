@@ -16,6 +16,7 @@ export class ExtractorEngine {
     this.extractors.set('profiles', new ProfileExtractor());
     this.extractors.set('products', new ProductExtractor());
     this.extractors.set('articles', new ArticleExtractor());
+    this.extractors.set('repositories', new RepositoryExtractor());
   }
 
   async extract(page, dataType, config = {}) {
@@ -335,6 +336,65 @@ class MetadataExtractor extends BaseExtractor {
       // Page title
       metadata.title = document.title;
       
+      // Wikipedia-specific metadata for research quality
+      if (window.location.hostname.includes('wikipedia.org')) {
+        // Extract article categories
+        const categories = Array.from(document.querySelectorAll('#mw-normal-catlinks ul li a'))
+          .map(link => link.textContent?.trim())
+          .filter(Boolean);
+        if (categories.length > 0) {
+          metadata.wikipedia_categories = categories;
+        }
+        
+        // Extract infobox data
+        const infobox = document.querySelector('.infobox');
+        if (infobox) {
+          const infoboxData = {};
+          const rows = infobox.querySelectorAll('tr');
+          rows.forEach(row => {
+            const label = row.querySelector('th, .infobox-label');
+            const value = row.querySelector('td, .infobox-data');
+            if (label && value) {
+              const key = label.textContent?.trim().replace(':', '').toLowerCase();
+              const val = value.textContent?.trim();
+              if (key && val && val.length < 200) { // Avoid overly long entries
+                infoboxData[key] = val;
+              }
+            }
+          });
+          if (Object.keys(infoboxData).length > 0) {
+            metadata.wikipedia_infobox = infoboxData;
+          }
+        }
+        
+        // Extract references count
+        const references = document.querySelectorAll('.references li, .reflist li');
+        if (references.length > 0) {
+          metadata.wikipedia_references_count = references.length;
+        }
+        
+        // Extract language links count (indicates article comprehensiveness)
+        const languageLinks = document.querySelectorAll('#p-lang .interlanguage-link');
+        if (languageLinks.length > 0) {
+          metadata.wikipedia_languages = languageLinks.length;
+        }
+        
+        // Extract last modified date
+        const lastModified = document.querySelector('#footer-info-lastmod');
+        if (lastModified) {
+          metadata.wikipedia_last_modified = lastModified.textContent?.trim();
+        }
+        
+        // Extract article quality indicators
+        const qualityIndicators = [];
+        if (document.querySelector('.featured-article-star')) qualityIndicators.push('featured');
+        if (document.querySelector('.good-article-star')) qualityIndicators.push('good');
+        if (document.querySelector('.B-Class')) qualityIndicators.push('B-class');
+        if (qualityIndicators.length > 0) {
+          metadata.wikipedia_quality = qualityIndicators;
+        }
+      }
+      
       return metadata;
     });
   }
@@ -499,17 +559,56 @@ class ArticleExtractor extends BaseExtractor {
             return null;
           },
           
-          // Strategy 3: Wikipedia articles
+          // Strategy 3: Wikipedia articles (enhanced for research quality)
           () => {
             if (window.location.hostname.includes('wikipedia.org')) {
               const content = document.querySelector('#mw-content-text .mw-parser-output');
               if (content) {
+                let extractedContent = [];
+                
+                // Get main article content with better filtering
                 const paragraphs = content.querySelectorAll('p');
-                return Array.from(paragraphs)
+                const mainContent = Array.from(paragraphs)
                   .map(p => p.textContent?.trim())
-                  .filter(text => text && text.length > 50 && !text.startsWith('Coordinates:'))
-                  .slice(0, 15)
-                  .join('\n\n');
+                  .filter(text => text && 
+                    text.length > 50 && 
+                    !text.startsWith('Coordinates:') &&
+                    !text.includes('This article needs additional citations') &&
+                    !text.includes('This disambiguation page') &&
+                    !text.match(/^\d+°.*[NS].*\d+°.*[EW]/) // Filter coordinate lines
+                  )
+                  .slice(0, 25); // Increase from 15 to 25 paragraphs
+                
+                extractedContent = extractedContent.concat(mainContent);
+                
+                // Extract key sections (History, Background, etc.)
+                const sections = content.querySelectorAll('h2, h3');
+                sections.forEach(heading => {
+                  const headingText = heading.textContent?.trim();
+                  if (headingText && 
+                      (headingText.includes('History') || 
+                       headingText.includes('Background') ||
+                       headingText.includes('Overview') ||
+                       headingText.includes('Description'))) {
+                    
+                    // Get content after this heading
+                    let nextElement = heading.nextElementSibling;
+                    let sectionContent = [];
+                    
+                    while (nextElement && !nextElement.matches('h2, h3') && sectionContent.length < 3) {
+                      if (nextElement.tagName === 'P' && nextElement.textContent?.trim().length > 50) {
+                        sectionContent.push(nextElement.textContent.trim());
+                      }
+                      nextElement = nextElement.nextElementSibling;
+                    }
+                    
+                    if (sectionContent.length > 0) {
+                      extractedContent.push(`\n## ${headingText}\n\n${sectionContent.join('\n\n')}`);
+                    }
+                  }
+                });
+                
+                return extractedContent.join('\n\n');
               }
             }
             return null;
@@ -528,5 +627,125 @@ class ArticleExtractor extends BaseExtractor {
     } catch (error) {
       return null;
     }
+  }
+}
+
+class RepositoryExtractor extends BaseExtractor {
+  async extract(page, config = {}) {
+    // GitHub-specific repository analysis
+    if (!page.url().includes('github.com')) {
+      return null;
+    }
+    
+    // Give page a moment to stabilize
+    await page.waitForTimeout(1000);
+    
+    return await page.evaluate(() => {
+      const repoData = {};
+      
+      // Repository name and description
+      const repoName = document.querySelector('h1 strong[itemprop="name"] a, h1 .AppHeader-context-item-label')?.textContent?.trim();
+      const description = document.querySelector('[data-testid="repository-topic-display"] p, .f4.my-3')?.textContent?.trim();
+      
+      repoData.name = repoName;
+      repoData.description = description;
+      
+      // Repository statistics
+      const stars = document.querySelector('#repo-stars-counter-star, [data-testid="repository-stars-counter"]')?.textContent?.trim();
+      const forks = document.querySelector('#repo-network-counter, [data-testid="repository-forks-counter"]')?.textContent?.trim();
+      const watchers = document.querySelector('#repo-notifications-counter')?.textContent?.trim();
+      
+      repoData.stars = stars;
+      repoData.forks = forks;
+      repoData.watchers = watchers;
+      
+      // Primary language
+      const language = document.querySelector('.BorderGrid-cell .ml-2 .color-fg-default, .f6.color-fg-muted .ml-2')?.textContent?.trim();
+      repoData.primary_language = language;
+      
+      // Topics/tags
+      const topics = Array.from(document.querySelectorAll('[data-testid="repository-topic-display"] a, .topic-tag'))
+        .map(topic => topic.textContent?.trim())
+        .filter(Boolean);
+      if (topics.length > 0) {
+        repoData.topics = topics;
+      }
+      
+      // README content (if visible)
+      const readmeContent = document.querySelector('#readme .markdown-body, article.markdown-body, .Box .markdown-body');
+      
+      if (readmeContent) {
+        // Extract text content, preserving some structure
+        const readmeText = readmeContent.innerText || readmeContent.textContent;
+        if (readmeText && readmeText.length > 100) {
+          repoData.readme_content = readmeText.substring(0, 10000); // Limit to 10k chars
+        }
+      } else {
+        // Try alternative README selectors
+        const altReadme = document.querySelector('[data-testid="readme"]') || 
+                          document.querySelector('.markdown-body') ||
+                          document.querySelector('.file .blob-wrapper');
+        if (altReadme) {
+          const readmeText = altReadme.innerText || altReadme.textContent;
+          if (readmeText && readmeText.length > 100) {
+            repoData.readme_content = readmeText.substring(0, 10000);
+          }
+        }
+      }
+      
+      // Extract headers from README for structure (if we found README content)
+      if (repoData.readme_content) {
+        const readmeContainer = readmeContent || 
+                                document.querySelector('[data-testid="readme"]') || 
+                                document.querySelector('.markdown-body');
+        if (readmeContainer) {
+          const headers = Array.from(readmeContainer.querySelectorAll('h1, h2, h3'))
+            .map(h => h.textContent?.trim())
+            .filter(Boolean)
+            .slice(0, 20);
+          if (headers.length > 0) {
+            repoData.readme_headers = headers;
+          }
+        }
+      }
+      
+      // Recent commits/activity
+      const commits = Array.from(document.querySelectorAll('.js-navigation-item .commit-message, .commit .commit-title'))
+        .slice(0, 5)
+        .map(commit => commit.textContent?.trim())
+        .filter(Boolean);
+      if (commits.length > 0) {
+        repoData.recent_commits = commits;
+      }
+      
+      // License information
+      const license = document.querySelector('[data-testid="license-link"], .octicon-law + *')?.textContent?.trim();
+      if (license) {
+        repoData.license = license;
+      }
+      
+      // Last commit date
+      const lastCommit = document.querySelector('relative-time, .commit-tease relative-time')?.getAttribute('datetime');
+      if (lastCommit) {
+        repoData.last_commit = lastCommit;
+      }
+      
+      // Contributors count
+      const contributors = document.querySelector('.Link--muted[href*="/graphs/contributors"]')?.textContent?.trim();
+      if (contributors) {
+        repoData.contributors = contributors;
+      }
+      
+      // File structure (from file browser if present)
+      const files = Array.from(document.querySelectorAll('.js-navigation-item .content span[title], .Box-row .Link--primary'))
+        .slice(0, 20)
+        .map(file => file.textContent?.trim() || file.getAttribute('title'))
+        .filter(Boolean);
+      if (files.length > 0) {
+        repoData.main_files = files;
+      }
+      
+      return repoData;
+    });
   }
 }

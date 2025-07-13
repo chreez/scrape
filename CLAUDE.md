@@ -94,6 +94,17 @@ bin/scrape.js             # NPX CLI interface
 config/platforms.json     # Platform configurations
 ```
 
+## Development Standards
+
+**IMPORTANT**: Follow clean architecture and TypeScript-ready patterns:
+- **File Size Limit**: Keep files under 300 lines (split large modules)
+- **Data Encapsulation**: Use clear interfaces and DTOs for data boundaries
+- **Module Organization**: One primary export per file, focused responsibilities
+- **TypeScript Patterns**: Write new code with types in mind (even in JS)
+- **Dependency Injection**: Inject dependencies via constructor
+- **Error Handling**: Use custom error classes and Result types
+- See `docs/DEVELOPMENT_STANDARDS.md` for complete guidelines
+
 ## Development Patterns
 
 **Content Type Strategy:** Different extraction logic based on detected content:

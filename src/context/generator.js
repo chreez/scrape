@@ -52,6 +52,9 @@ export class ContextGenerator {
       case 'social-video':
         summary += this.generateVideoSummary(data);
         break;
+      case 'code-repository':
+        summary += this.generateRepositorySummary(data);
+        break;
       default:
         summary += this.generateGenericSummary(data);
     }
@@ -75,6 +78,8 @@ export class ContextGenerator {
       content += this.formatProductContent(data.product);
     } else if (data.profile) {
       content += this.formatProfileContent(data.profile);
+    } else if (data.repository) {
+      content += this.formatRepositoryContent(data.repository);
     } else if (data.textContent) {
       content += this.formatTextContent(data.textContent);
     }
@@ -130,6 +135,20 @@ export class ContextGenerator {
       };
     }
     
+    if (data.repository) {
+      metadata.repository = {
+        name: data.repository.name,
+        description: data.repository.description,
+        stars: data.repository.stars,
+        forks: data.repository.forks,
+        primary_language: data.repository.primary_language,
+        license: data.repository.license,
+        topics: data.repository.topics,
+        contributors: data.repository.contributors,
+        last_commit: data.repository.last_commit
+      };
+    }
+    
     return JSON.stringify(metadata, null, 2);
   }
 
@@ -157,6 +176,9 @@ export class ContextGenerator {
       case 'social-profile':
         context += this.generateProfileContext(data);
         break;
+      case 'code-repository':
+        context += this.generateRepositoryContext(data);
+        break;
       default:
         context += this.generateGenericContext(data);
     }
@@ -166,6 +188,8 @@ export class ContextGenerator {
     
     if (data.article && data.article.content) {
       context += this.optimizeTextForLLM(data.article.content);
+    } else if (data.repository && data.repository.readme_content) {
+      context += this.optimizeTextForLLM(data.repository.readme_content);
     } else if (data.textContent && data.textContent.content) {
       context += this.optimizeTextForLLM(data.textContent.content);
     } else if (data.textContent && data.textContent.title) {
@@ -388,6 +412,100 @@ export class ContextGenerator {
     if (textContent.content) content += textContent.content;
     
     return content;
+  }
+
+  formatRepositoryContent(repository) {
+    let content = '';
+    
+    if (repository.name) content += `Repository: ${repository.name}\n`;
+    if (repository.description) content += `Description: ${repository.description}\n\n`;
+    
+    if (repository.stars || repository.forks || repository.primary_language) {
+      content += 'Statistics:\n';
+      if (repository.stars) content += `- Stars: ${repository.stars}\n`;
+      if (repository.forks) content += `- Forks: ${repository.forks}\n`;
+      if (repository.primary_language) content += `- Language: ${repository.primary_language}\n`;
+      if (repository.license) content += `- License: ${repository.license}\n`;
+      content += '\n';
+    }
+    
+    if (repository.topics && repository.topics.length > 0) {
+      content += `Topics: ${repository.topics.join(', ')}\n\n`;
+    }
+    
+    if (repository.readme_content) {
+      content += 'README:\n';
+      content += '--------\n';
+      content += repository.readme_content;
+      content += '\n\n';
+    }
+    
+    if (repository.recent_commits && repository.recent_commits.length > 0) {
+      content += 'Recent Commits:\n';
+      repository.recent_commits.forEach(commit => {
+        content += `- ${commit}\n`;
+      });
+      content += '\n';
+    }
+    
+    return content;
+  }
+
+  generateRepositorySummary(data) {
+    let summary = '## Repository Summary\n\n';
+    
+    if (data.repository) {
+      if (data.repository.name) summary += `**Repository**: ${data.repository.name}\n`;
+      if (data.repository.primary_language) summary += `**Language**: ${data.repository.primary_language}\n`;
+      if (data.repository.stars) summary += `**Stars**: ${data.repository.stars}\n`;
+      if (data.repository.forks) summary += `**Forks**: ${data.repository.forks}\n`;
+      if (data.repository.license) summary += `**License**: ${data.repository.license}\n`;
+      summary += '\n';
+      
+      if (data.repository.description) {
+        summary += `**Description**: ${data.repository.description}\n\n`;
+      }
+      
+      if (data.repository.topics && data.repository.topics.length > 0) {
+        summary += `**Topics**: ${data.repository.topics.join(', ')}\n\n`;
+      }
+      
+      if (data.repository.readme_content) {
+        const excerpt = this.createExcerpt(data.repository.readme_content, 300);
+        summary += `**README Preview**: ${excerpt}\n\n`;
+      }
+    }
+    
+    return summary;
+  }
+
+  generateRepositoryContext(data) {
+    let context = '';
+    
+    if (data.repository) {
+      if (data.repository.name) context += `- **Repository**: ${data.repository.name}\n`;
+      if (data.repository.description) context += `- **Description**: ${data.repository.description}\n`;
+      if (data.repository.primary_language) context += `- **Language**: ${data.repository.primary_language}\n`;
+      if (data.repository.stars) context += `- **Stars**: ${data.repository.stars}\n`;
+      if (data.repository.forks) context += `- **Forks**: ${data.repository.forks}\n`;
+      if (data.repository.license) context += `- **License**: ${data.repository.license}\n`;
+      if (data.repository.contributors) context += `- **Contributors**: ${data.repository.contributors}\n`;
+      if (data.repository.last_commit) context += `- **Last Commit**: ${data.repository.last_commit}\n`;
+      
+      if (data.repository.topics && data.repository.topics.length > 0) {
+        context += `- **Topics**: ${data.repository.topics.join(', ')}\n`;
+      }
+      
+      if (data.repository.recent_commits && data.repository.recent_commits.length > 0) {
+        context += `- **Recent Commits**: ${data.repository.recent_commits.slice(0, 3).join(', ')}\n`;
+      }
+      
+      if (data.repository.readme_headers && data.repository.readme_headers.length > 0) {
+        context += `- **README Sections**: ${data.repository.readme_headers.slice(0, 5).join(', ')}\n`;
+      }
+    }
+    
+    return context;
   }
 
   formatStructuredData(structured) {

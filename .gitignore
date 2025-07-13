@@ -49,3 +49,11 @@ playwright/.cache/
 # Browser downloads
 downloads/
 temp/
+
+# TypeScript build output
+dist/
+*.tsbuildinfo
+
+# TypeScript declaration files (during migration)
+*.d.ts
+*.d.ts.map

@@ -240,6 +240,16 @@ export class SmartScraper {
             this.log(`⚠️ Learned ${extractorType} extractor failed: ${error.message}`);
           }
         }
+        
+        // Always call content-type specific extractors, even with learned patterns
+        if (pageAnalysis.contentType === 'code-repository' && !learnedPatterns.extractors.includes('repositories')) {
+          try {
+            data.repository = await this.extractor.extract(page, 'repositories');
+            this.log('✅ Repository data extracted (content-type specific)');
+          } catch (error) {
+            this.log(`⚠️ Repository extractor failed: ${error.message}`);
+          }
+        }
       } else {
         // Default extraction approach
         // Always extract basic metadata
@@ -269,6 +279,10 @@ export class SmartScraper {
         case 'social-video':
         case 'video':
           data.video = await this.extractor.extract(page, 'video');
+          break;
+          
+        case 'code-repository':
+          data.repository = await this.extractor.extract(page, 'repositories');
           break;
           
         case 'social-post':
@@ -313,7 +327,8 @@ export class SmartScraper {
       'video': 'video',
       'structured': 'structured',
       'images': 'images',
-      'links': 'links'
+      'links': 'links',
+      'repositories': 'repository'
     };
     
     return mapping[extractorType] || extractorType;
